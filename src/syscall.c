@@ -11,36 +11,39 @@
 #include "syscall.h"
 #include "common.h"
 
-#define __SYSCALL(nr, sym) extern int __##sym(struct krnl_t*, uint32_t,struct sc_regs*);
-#include "syscalltbl.lst"
-#undef  __SYSCALL
+// Định nghĩa thủ công các prototype thay vì dùng macro phức tạp
+extern int __sys_listsyscall(struct krnl_t *, uint32_t, struct sc_regs *);
+extern int __sys_memmap(struct krnl_t *, uint32_t, struct sc_regs *);
 
 /*
  * The sys_call_table[] is used for system calls, but to know the system
  * call address.
  */
-#define __SYSCALL(nr, sym) #nr "-" #sym,
-const char* sys_call_table[] = {
-#include "syscalltbl.lst"
+const char *sys_call_table[] = {
+    "0-sys_listsyscall",
+    "17-sys_memmap",
 };
-#undef  __SYSCALL
-const int syscall_table_size = sizeof(sys_call_table)/sizeof(char*);
+
+const int syscall_table_size = sizeof(sys_call_table) / sizeof(char *);
 
 int __sys_ni_syscall(struct krnl_t *krnl, struct sc_regs *regs)
 {
    /*
     * DUMMY systemcall
     */
-
    return 0;
 }
 
-#define __SYSCALL(nr, sym) case nr: return __##sym(krnl,pid,regs);
-int syscall(struct krnl_t *krnl, uint32_t pid, uint32_t nr, struct sc_regs* regs)
+int syscall(struct krnl_t *krnl, uint32_t pid, uint32_t nr, struct sc_regs *regs)
 {
-	switch (nr) {
-	#include "syscalltbl.lst"
-	default: return __sys_ni_syscall(krnl, regs);
-	}
+   // Chuyển đổi thủ công thay vì dùng file .lst để tránh lỗi include
+   switch (nr)
+   {
+   case 0:
+      return __sys_listsyscall(krnl, pid, regs);
+   case 17:
+      return __sys_memmap(krnl, pid, regs);
+   default:
+      return __sys_ni_syscall(krnl, regs);
+   }
 };
-

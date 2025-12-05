@@ -170,9 +170,17 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
 
 int MEMPHY_dump(struct memphy_struct *mp)
 {
-  /*TODO dump memphy contnt mp->storage
-   *     for tracing the memory content
-   */
+   if (mp == NULL || mp->storage == NULL)
+      return -1;
+
+   printf("MEMPHY DUMP:\n");
+   for (int i = 0; i < mp->maxsz; i++)
+   {
+      if (mp->storage[i] != 0)
+      {
+         printf("Addr: %d - Val: %d\n", i, mp->storage[i]);
+      }
+   }
    return 0;
 }
 
