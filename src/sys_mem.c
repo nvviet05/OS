@@ -20,55 +20,51 @@
 #include "mm.h"
 #endif
 
-// typedef char BYTE;
-
-int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs *regs)
+// ...
+int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
 {
-    int memop = regs->a1;
-    BYTE value;
+   int memop = regs->a1;
+   BYTE value;
+   
+   struct pcb_t *caller = NULL;
 
-    /* TODO THIS DUMMY CREATE EMPTY PROC TO AVOID COMPILER NOTIFY
-     *      need to be eliminated
-     */
-    struct pcb_t *caller = malloc(sizeof(struct pcb_t));
+   /* TODO: Traverse proclist to terminate the proc */
+   /* Maching and marking the process */
+   struct queue_t *running = krnl->running_list;
+   // Note: The structure name is queue_t but in sched.c it's treated as a list of currently running/active processes?
+   // Or we iterate ready queues? 
+   // Usually, a system call is made by the *running* process. 
+   // Assuming krnl->running_list contains the active processes.
+   for (int i = 0; i < running->size; i++) {
+       if (running->proc[i]->pid == pid) {
+           caller = running->proc[i];
+           break;
+       }
+   }
 
-    /*
-     * @bksysnet: Please note in the dual spacing design
-     *            syscall implementations are in kernel space.
-     */
+   if (caller == NULL) return -1; // Process not found
 
-    /* TODO: Traverse proclist to terminate the proc
-     *       stcmp to check the process match proc_name
-     */
-    //	struct queue_t *running_list = krnl->running_list;
-
-    /* TODO Maching and marking the process */
-    /* user process are not allowed to access directly pcb in kernel space of syscall */
-    //....
-
-    switch (memop)
-    {
-    case SYSMEM_MAP_OP:
-        /* Reserved process case*/
-        vmap_pgd_memset(caller, regs->a2, regs->a3);
-        break;
-    case SYSMEM_INC_OP:
-        inc_vma_limit(caller, regs->a2, regs->a3);
-        break;
-    case SYSMEM_SWP_OP:
-        __mm_swap_page(caller, regs->a2, regs->a3);
-        break;
-    case SYSMEM_IO_READ:
-        MEMPHY_read(caller->krnl->mram, regs->a2, &value);
-        regs->a3 = value;
-        break;
-    case SYSMEM_IO_WRITE:
-        MEMPHY_write(caller->krnl->mram, regs->a2, regs->a3);
-        break;
-    default:
-        printf("Memop code: %d\n", memop);
-        break;
-    }
-
-    return 0;
+   switch (memop) {
+   case SYSMEM_MAP_OP:
+            vmap_pgd_memset(caller, regs->a2, regs->a3);
+            break;
+   case SYSMEM_INC_OP:
+            inc_vma_limit(caller, regs->a2, regs->a3);
+            break;
+   case SYSMEM_SWP_OP:
+            __mm_swap_page(caller, regs->a2, regs->a3);
+            break;
+   case SYSMEM_IO_READ:
+            MEMPHY_read(caller->krnl->mram, regs->a2, &value);
+            regs->a3 = value;
+            break;
+   case SYSMEM_IO_WRITE:
+            MEMPHY_write(caller->krnl->mram, regs->a2, regs->a3);
+            break;
+   default:
+            printf("Memop code: %d\n", memop);
+            break;
+   }
+   
+   return 0;
 }

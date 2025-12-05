@@ -8,9 +8,12 @@
  * for the sole purpose of studying while attending the course CO2018.
  */
 
+#ifndef SYSCALL_H
+#define SYSCALL_H
+
 #include "common.h"
 
-
+/* Định nghĩa cấu trúc sc_regs */
 struct sc_regs {
         arg_t a1;
         arg_t a2;
@@ -19,19 +22,11 @@ struct sc_regs {
         arg_t a5;
         arg_t a6;
 
-        /*
-         * orig_ax is used on entry for:
-         * - the syscall number (syscall, sysenter, int80)
-         * - error_code stored by the CPU on traps and exceptions
-         * - the interrupt number for device interrupts
-         */
         uint32_t orig_ax;
-
         int32_t flags;
 };
 
-
-/* This is used purely for kernel trace the table of system call */
+/* Khai báo các hàm và bảng hệ thống */
 extern const char* sys_call_table[];
 extern const int syscall_table_size;
 
@@ -41,3 +36,4 @@ int libsyscall(struct pcb_t*, uint32_t, arg_t, arg_t, arg_t);
 int syscall(struct krnl_t*, uint32_t, uint32_t, struct sc_regs*);
 int __sys_ni_syscall(struct krnl_t*, struct sc_regs*);
 
+#endif /* SYSCALL_H */

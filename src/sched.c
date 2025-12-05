@@ -53,24 +53,57 @@ void init_scheduler(void)
 }
 
 #ifdef MLQ_SCHED
-/*
- *  Stateful design for routine calling
- *  based on the priority and our MLQ policy
- *  We implement stateful here using transition technique
- *  State representation   prio = 0 .. MAX_PRIO, curr_slot = 0..(MAX_PRIO - prio)
- */
-struct pcb_t *get_mlq_proc(void)
-{
-	struct pcb_t *proc = NULL;
+struct pcb_t * get_mlq_proc(void) {
+	struct pcb_t * proc = NULL;
 
 	pthread_mutex_lock(&queue_lock);
 	/*TODO: get a process from PRIORITY [ready_queue].
-	 *      It worth to protect by a mechanism.
+	 * It worth to protect by a mechanism.
 	 * */
+    // Iterate through priority queues
+    for (int i = 0; i < MAX_PRIO; i++) {
+        if (!empty(&mlq_ready_queue[i])) {
+            if (slot[i] > 0) {
+                proc = dequeue(&mlq_ready_queue[i]);
+                slot[i]--;
+                break;
+            } else {
+                // Slot used up, but queue not empty. 
+                // In a strict MLQ with time slots, we might skip to next or reset if all exhausted.
+                // Assuming we move to next lower priority if slot is 0.
+            }
+        }
+    }
+
+    // If no process found (all slots used up or queues empty), we might need to reset slots
+    // This part handles the "refresh" if everyone has used their turn.
+    if (proc == NULL) {
+        int not_empty = 0;
+        for (int i = 0; i < MAX_PRIO; i++) {
+            if (!empty(&mlq_ready_queue[i])) {
+                not_empty = 1;
+                break;
+            }
+        }
+        if (not_empty) {
+            // Reset slots
+            for (int i = 0; i < MAX_PRIO; i++) slot[i] = MAX_PRIO - i;
+            // Try get proc again
+             for (int i = 0; i < MAX_PRIO; i++) {
+                if (!empty(&mlq_ready_queue[i]) && slot[i] > 0) {
+                    proc = dequeue(&mlq_ready_queue[i]);
+                    slot[i]--;
+                    break;
+                }
+            }
+        }
+    }
 
 	if (proc != NULL)
 		enqueue(&running_list, proc);
-	return proc;
+    
+    pthread_mutex_unlock(&queue_lock);
+	return proc;	
 }
 
 void put_mlq_proc(struct pcb_t *proc)
