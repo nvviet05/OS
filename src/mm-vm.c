@@ -123,6 +123,8 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
     return -1; 
 
   cur_vma->sbrk += inc_sz;
+  // Correction: Update vm_end to allow print_pgtbl to iterate over this range
+  cur_vma->vm_end += inc_sz;
   
   return 0;
 }
